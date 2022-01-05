@@ -1,6 +1,7 @@
 "use strict";
 
 const list = require('./routes/list').handle;
+const check = require('./routes/check').handle;
 
 module.exports.route = async (event) => {
   if(event.requestContext === undefined
@@ -38,6 +39,10 @@ module.exports.route = async (event) => {
 
   if (path === '/list') {
     return list(event);
+  }
+
+  if (path === '/check') {
+    return check(event);
   }
 
   return {
