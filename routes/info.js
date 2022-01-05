@@ -16,8 +16,7 @@ module.exports.handle = async (event) => {
   //   ),
   // };
   if(event.queryStringParameters === undefined
-    || event.queryStringParameters.page === undefined
-    || event.queryStringParameters.perPage === undefined
+    || event.queryStringParameters.id === undefined
     || event.queryStringParameters.type === undefined
     ) return {
       statusCode: 400,
@@ -48,16 +47,21 @@ module.exports.handle = async (event) => {
         2
       ),
   };
-  const type = event.queryStringParameters.type
+  const type = event.queryStringParameters.type;
 
-  let page = Number(event.queryStringParameters.page);
-  let perPage = Number(event.queryStringParameters.perPage);
-
-  // sanity checking inputs
-  page = Math.min(9999, page);
-  perPage = Math.min(100, perPage);
-  page = Math.max(0, page);
-  perPage = Math.max(0, perPage);
+  const id = Number(event.queryStringParameters.id);
+  if(isNaN(id) || id < 0 || id > 999999)
+    return {
+      statusCode: 400,
+      body: JSON.stringify(
+        {
+          success: false,
+          message: "Invalid ban id",          
+        },
+        null,
+        2
+      ),
+  };
 
   const con = await mysql.createConnection({
     host: secret.sql.host,
@@ -68,8 +72,9 @@ module.exports.handle = async (event) => {
 
   const query = `
   SELECT t1.id AS id, t2.name AS name, t1.uuid AS uuid, t3.name AS banned_by,
-    t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time
-    ${type !== 'kicks' ? ', t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid' : ' '}
+    t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
+    t1.server_origin AS server_origin
+    ${type !== 'kicks' ? ', t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid, t1.removed_by_reason AS removed_by_reason' : ' '}
 
   FROM ${secret.tables[type]} t1 
   
@@ -79,11 +84,26 @@ module.exports.handle = async (event) => {
   JOIN (SELECT name, uuid FROM ${secret.tables.history} WHERE date IN (SELECT max(date) FROM ${secret.tables.history} GROUP BY uuid))
     AS t3 ON (t1.banned_by_uuid = t3.uuid)
     
-  WHERE t1.silent = 0
-  ORDER BY t1.time DESC LIMIT ${page*perPage},${perPage};
+  WHERE t1.id = ? 
+  LIMIT 1;
   `;
-  const result = await con.query(query);
+  const result = await con.query(query, [id]);
   con.end();
+
+  if(!result[0] || result[0].length === 0) {
+    return {
+      statusCode: 404,
+      body: JSON.stringify(
+        {
+          success: false,
+          message: "Punishment not found",          
+        },
+        null,
+        2
+      ),
+    };
+  }
+
   return {
     statusCode: 200,
     headers: {
@@ -91,7 +111,7 @@ module.exports.handle = async (event) => {
     },
     body: JSON.stringify(
       {
-        result: result[0],
+        result: result[0][0],
         success: true,
         input: event,
       },

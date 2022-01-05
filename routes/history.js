@@ -79,7 +79,7 @@ module.exports.handle = async (event) => {
 
   // punishments for the input user
   const query_for = `
-  (SELECT t1.id AS id, 'ban' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
+  (SELECT t1.id AS id, 'bans' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
     t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
     t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
@@ -92,7 +92,7 @@ module.exports.handle = async (event) => {
 
   UNION
 
-  (SELECT t1.id AS id, 'mute' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
+  (SELECT t1.id AS id, 'mutes' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
   t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
   t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
@@ -105,7 +105,7 @@ module.exports.handle = async (event) => {
 
   UNION
 
-  (SELECT t1.id AS id, 'warning' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
+  (SELECT t1.id AS id, 'warnings' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
   t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
   t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
@@ -118,7 +118,7 @@ module.exports.handle = async (event) => {
 
   UNION
 
-  (SELECT t1.id AS id, 'kick' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
+  (SELECT t1.id AS id, 'kicks' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
   t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
   NULL AS removed_by_name, NULL AS removed_by_uuid
 
@@ -134,7 +134,7 @@ module.exports.handle = async (event) => {
 
   // punishments by the input user
   const query_by = `
-  (SELECT t1.id AS id, 'ban' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
+  (SELECT t1.id AS id, 'bans' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
     t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
     t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
@@ -147,7 +147,7 @@ module.exports.handle = async (event) => {
 
   UNION
 
-  (SELECT t1.id AS id, 'mute' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
+  (SELECT t1.id AS id, 'mutes' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
   t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
   t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
@@ -160,7 +160,7 @@ module.exports.handle = async (event) => {
 
   UNION
 
-  (SELECT t1.id AS id, 'warning' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
+  (SELECT t1.id AS id, 'warnings' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
   t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
   t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
@@ -173,7 +173,7 @@ module.exports.handle = async (event) => {
 
   UNION
 
-  (SELECT t1.id AS id, 'kick' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
+  (SELECT t1.id AS id, 'kicks' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
   t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
   NULL AS removed_by_name, NULL AS removed_by_uuid
 
