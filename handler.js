@@ -2,6 +2,7 @@
 
 const list = require('./routes/list').handle;
 const check = require('./routes/check').handle;
+const history = require('./routes/history').handle;
 
 module.exports.route = async (event) => {
   if(event.requestContext === undefined
@@ -43,6 +44,10 @@ module.exports.route = async (event) => {
 
   if (path === '/check') {
     return check(event);
+  }
+
+  if (path === '/history') {
+    return history(event);
   }
 
   return {

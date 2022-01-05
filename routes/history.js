@@ -77,69 +77,117 @@ module.exports.handle = async (event) => {
   page = Math.max(0, page);
   perPage = Math.max(0, perPage);
 
-  const con = await mysql.createConnection({
-    host: secret.sql.host,
-    user: secret.sql.user,
-    password: secret.sql.pass,
-    database: secret.sql.db
-  });  
-
   // punishments for the input user
   const query_for = `
-  (SELECT t1.id AS id, 'ban' AS type, 'Captain_Sisko' AS name, t1.uuid AS uuid, t2.name AS banned_by,
+  (SELECT t1.id AS id, 'ban' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
     t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
     t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
-  FROM litebans_bans t1 
+  FROM ${secret.tables.bans} t1 
   
   JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
     AS t2 ON (t1.banned_by_uuid = t2.uuid)
     
-  WHERE t1.silent = 0 AND t1.uuid = '804c7ee5-db51-4e58-a011-475f00df6828')
+  WHERE t1.silent = 0 AND t1.uuid = ?)
 
   UNION
 
-  (SELECT t1.id AS id, 'mute' AS type, 'Captain_Sisko' AS name, t1.uuid AS uuid, t2.name AS banned_by,
+  (SELECT t1.id AS id, 'mute' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
   t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
   t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
-  FROM litebans_mutes t1 
+  FROM ${secret.tables.mutes} t1 
 
   JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
     AS t2 ON (t1.banned_by_uuid = t2.uuid)
   
-  WHERE t1.silent = 0 AND t1.uuid = '804c7ee5-db51-4e58-a011-475f00df6828')
+  WHERE t1.silent = 0 AND t1.uuid = ?)
 
   UNION
 
-  (SELECT t1.id AS id, 'warning' AS type, 'Captain_Sisko' AS name, t1.uuid AS uuid, t2.name AS banned_by,
+  (SELECT t1.id AS id, 'warning' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
   t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
   t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
-  FROM litebans_warnings t1 
+  FROM ${secret.tables.warnings} t1 
 
   JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
     AS t2 ON (t1.banned_by_uuid = t2.uuid)
   
-  WHERE t1.silent = 0 AND t1.uuid = '804c7ee5-db51-4e58-a011-475f00df6828')
+  WHERE t1.silent = 0 AND t1.uuid = ?)
 
   UNION
 
-  (SELECT t1.id AS id, 'kick' AS type, 'Captain_Sisko' AS name, t1.uuid AS uuid, t2.name AS banned_by,
+  (SELECT t1.id AS id, 'kick' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
   t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
   NULL AS removed_by_name, NULL AS removed_by_uuid
 
-  FROM litebans_kicks t1 
+  FROM ${secret.tables.kicks} t1 
 
   JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
     AS t2 ON (t1.banned_by_uuid = t2.uuid)
   
-  WHERE t1.silent = 0 AND t1.uuid = '804c7ee5-db51-4e58-a011-475f00df6828')
+  WHERE t1.silent = 0 AND t1.uuid = ?)
 
-  ORDER BY time DESC LIMIT 0,10;
+  ORDER BY time DESC LIMIT ${page*perPage},${perPage};
   `;
 
   // punishments by the input user
+  const query_by = `
+  (SELECT t1.id AS id, 'ban' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
+    t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
+    t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
+
+  FROM ${secret.tables.bans} t1 
+  
+  JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
+    AS t2 ON (t1.uuid = t2.uuid)
+    
+  WHERE t1.silent = 0 AND t1.banned_by_uuid = ?)
+
+  UNION
+
+  (SELECT t1.id AS id, 'mute' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
+  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
+  t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
+
+  FROM ${secret.tables.mutes} t1 
+
+  JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
+    AS t2 ON (t1.uuid = t2.uuid)
+  
+  WHERE t1.silent = 0 AND t1.banned_by_uuid = ?)
+
+  UNION
+
+  (SELECT t1.id AS id, 'warning' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
+  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
+  t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
+
+  FROM ${secret.tables.warnings} t1 
+
+  JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
+    AS t2 ON (t1.uuid = t2.uuid)
+  
+  WHERE t1.silent = 0 AND t1.banned_by_uuid = ?)
+
+  UNION
+
+  (SELECT t1.id AS id, 'kick' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
+  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
+  NULL AS removed_by_name, NULL AS removed_by_uuid
+
+  FROM ${secret.tables.kicks} t1 
+
+  JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
+    AS t2 ON (t1.uuid = t2.uuid)
+  
+  WHERE t1.silent = 0 AND t1.banned_by_uuid = ?)
+
+  ORDER BY time DESC LIMIT ${page*perPage},${perPage};
+  `;
+
+  const query = type === 'by' ? query_by : query_for;
 
   const con = await mysql.createConnection({
     host: secret.sql.host,
@@ -147,7 +195,7 @@ module.exports.handle = async (event) => {
     password: secret.sql.pass,
     database: secret.sql.db
   });  
-  const result = await con.query(query);
+  const result = await con.query(query, [name, uuid, name, uuid, name, uuid, name, uuid]);
   con.end();
   return {
     statusCode: 200,
