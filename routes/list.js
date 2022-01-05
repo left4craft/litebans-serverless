@@ -53,6 +53,19 @@ module.exports.handle = async (event) => {
   let page = Number(event.queryStringParameters.page);
   let perPage = Number(event.queryStringParameters.perPage);
 
+  if(isNaN(page) || isNaN(perPage))
+    return {
+      statusCode: 400,
+      body: JSON.stringify(
+        {
+          success: false,
+          message: "Invalid page numbers",          
+        },
+        null,
+        2
+      ),
+  };
+
   // sanity checking inputs
   page = Math.min(9999, page);
   perPage = Math.min(100, perPage);
