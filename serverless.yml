@@ -1,0 +1,38 @@
+service: litebans-serverless
+frameworkVersion: '2'
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  lambdaHashingVersion: '20201221'
+  region: us-east-2
+  stackName: l4c-litebans-serverless
+  apiName: l4c-litebans-serverless
+  memorySize: 256
+  vpc: # Optional VPC. But if you use VPC then both subproperties (securityGroupIds and subnetIds) are required
+    securityGroupIds:
+      - sg-053b09ebbefb4f00f
+    subnetIds:
+      - subnet-8c6241f6
+      - subnet-24921968
+      - subnet-9146acfa
+
+functions:
+  router:
+    handler: handler.route
+    events:
+      - httpApi:
+          path: /
+          method: get
+      - httpApi:
+          path: /list
+          method: get
+      - httpApi:
+          path: /check
+          method: get
+      - httpApi:
+          path: /history
+          method: get
+      - httpApi:
+          path: /info
+          method: get
