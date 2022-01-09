@@ -4,20 +4,10 @@ const mysql = require('mysql2/promise');
 const secret = require('../secret').keys;
 
 module.exports.handle = async (event) => {
-  // if(event.headers.authorization !== secret.api.key) return {
-  //   statusCode: 403,
-  //   body: JSON.stringify(
-  //     {
-  //       success: false,
-  //       message: "Access Denied",
-  //     },
-  //     null,
-  //     2
-  //   ),
-  // };
   if(event.queryStringParameters === undefined
     || event.queryStringParameters.id === undefined
     || event.queryStringParameters.type === undefined
+    || event.queryStringParameters.apiKey !== secret.api.key
     ) return {
       statusCode: 400,
       headers: {

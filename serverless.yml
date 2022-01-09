@@ -1,6 +1,8 @@
 service: litebans-serverless
 frameworkVersion: '2'
 
+# Note: custom domain and API throttling must be set up from the AWS console
+
 provider:
   name: aws
   runtime: nodejs14.x
