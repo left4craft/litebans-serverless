@@ -5,7 +5,6 @@ const secret = require('../secret').keys;
 
 module.exports.handle = async (event) => {
   if(event.queryStringParameters === undefined
-    || event.queryStringParameters.name === undefined
     || event.queryStringParameters.uuid === undefined
     || event.queryStringParameters.page === undefined
     || event.queryStringParameters.perPage === undefined
@@ -26,12 +25,10 @@ module.exports.handle = async (event) => {
       ),
   };
 
-  const name = event.queryStringParameters.name;
   const uuid = event.queryStringParameters.uuid;
   const type = event.queryStringParameters.type
 
-  if(!/^[0-9a-zA-Z-]{36}/.test(uuid)
-    || !/^[0-9a-zA-Z_]{1,16}$/.test(name)
+  if(!/^[0-9a-zA-Z-]{36}$/.test(uuid)
     || (type !== 'by' && type !== 'for')
     ) return {
       statusCode: 400,
@@ -78,7 +75,9 @@ module.exports.handle = async (event) => {
   JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
     AS t2 ON (t1.banned_by_uuid = t2.uuid)
     
-  WHERE t1.silent = 0 AND t1.uuid = ?)
+  WHERE t1.silent = 0 AND t1.uuid = ?
+  
+  GROUP BY t1.id)
 
   UNION
 
@@ -91,7 +90,9 @@ module.exports.handle = async (event) => {
   JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
     AS t2 ON (t1.banned_by_uuid = t2.uuid)
   
-  WHERE t1.silent = 0 AND t1.uuid = ?)
+  WHERE t1.silent = 0 AND t1.uuid = ?
+  
+  GROUP BY t1.id)
 
   UNION
 
@@ -104,7 +105,9 @@ module.exports.handle = async (event) => {
   JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
     AS t2 ON (t1.banned_by_uuid = t2.uuid)
   
-  WHERE t1.silent = 0 AND t1.uuid = ?)
+  WHERE t1.silent = 0 AND t1.uuid = ?
+  
+  GROUP BY t1.id)
 
   UNION
 
@@ -117,7 +120,9 @@ module.exports.handle = async (event) => {
   JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
     AS t2 ON (t1.banned_by_uuid = t2.uuid)
   
-  WHERE t1.silent = 0 AND t1.uuid = ?)
+  WHERE t1.silent = 0 AND t1.uuid = ?
+  
+  GROUP BY t1.id)
 
   ORDER BY time DESC LIMIT ${page*perPage},${perPage};
   `;
@@ -133,7 +138,9 @@ module.exports.handle = async (event) => {
   JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
     AS t2 ON (t1.uuid = t2.uuid)
     
-  WHERE t1.silent = 0 AND t1.banned_by_uuid = ?)
+  WHERE t1.silent = 0 AND t1.banned_by_uuid = ?
+  
+  GROUP BY t1.id)
 
   UNION
 
@@ -146,7 +153,9 @@ module.exports.handle = async (event) => {
   JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
     AS t2 ON (t1.uuid = t2.uuid)
   
-  WHERE t1.silent = 0 AND t1.banned_by_uuid = ?)
+  WHERE t1.silent = 0 AND t1.banned_by_uuid = ?
+  
+  GROUP BY t1.id)
 
   UNION
 
@@ -159,7 +168,9 @@ module.exports.handle = async (event) => {
   JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
     AS t2 ON (t1.uuid = t2.uuid)
   
-  WHERE t1.silent = 0 AND t1.banned_by_uuid = ?)
+  WHERE t1.silent = 0 AND t1.banned_by_uuid = ?
+  
+  GROUP BY t1.id)
 
   UNION
 
@@ -172,19 +183,36 @@ module.exports.handle = async (event) => {
   JOIN (SELECT name, uuid FROM litebans_history WHERE date IN (SELECT max(date) FROM litebans_history GROUP BY uuid))
     AS t2 ON (t1.uuid = t2.uuid)
   
-  WHERE t1.silent = 0 AND t1.banned_by_uuid = ?)
+  WHERE t1.silent = 0 AND t1.banned_by_uuid = ?
+  
+  GROUP BY t1.id)
 
   ORDER BY time DESC LIMIT ${page*perPage},${perPage};
   `;
 
   const query = type === 'by' ? query_by : query_for;
 
+  const query_name = `SELECT name FROM ${secret.tables.history} WHERE uuid = ?
+    ORDER BY date DESC LIMIT 1;`
+
+  const query_count = `SELECT COUNT(id) AS count FROM ?? WHERE silent=0 AND uuid = ?;`
+
   const con = await mysql.createConnection({
     host: secret.sql.host,
     user: secret.sql.user,
     password: secret.sql.pass,
     database: secret.sql.db
-  });  
+  });
+  const result_name = await con.query(query_name, [uuid]);
+  const name = result_name[0][0].name;
+
+  // get total rows for pragnation
+  let count = 0;
+  for(const table of ['bans', 'mutes', 'warnings', 'kicks']) {
+    const result_count = await con.query(query_count, [secret.tables[table], uuid]);
+    count += Number(result_count[0][0].count);
+  }
+
   const result = await con.query(query, [name, uuid, name, uuid, name, uuid, name, uuid]);
   con.end();
   return {
@@ -195,8 +223,16 @@ module.exports.handle = async (event) => {
     body: JSON.stringify(
       {
         result: result[0],
+        minecraft: {
+          username: name,
+          uuid: uuid
+        },
+        pragnation: {
+          page: page,
+          pages: Math.floor(count/perPage)
+        },
         success: true,
-        input: event,
+        // input: event,
       },
       null,
       2

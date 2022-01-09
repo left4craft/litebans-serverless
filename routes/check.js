@@ -26,7 +26,7 @@ module.exports.handle = async (event) => {
   let column = 'name';
 
   // if matching uuid regex, check uuid instead of name
-  if(/^[0-9a-zA-Z-]{32,36}/.test(name)) {
+  if(/^[0-9a-zA-Z-]{32,36}$/.test(name)) {
     column = 'uuid';
     name = dashify(name);
   // if neiher name nor uuid regex match, input is invalid
@@ -67,7 +67,7 @@ module.exports.handle = async (event) => {
         {
           result: result[0][0],
           success: true,
-          input: event,
+          // input: event,
         },
         null,
         2

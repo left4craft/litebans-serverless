@@ -74,7 +74,7 @@ module.exports.handle = async (event) => {
   JOIN (SELECT name, uuid FROM ${secret.tables.history} WHERE date IN (SELECT max(date) FROM ${secret.tables.history} GROUP BY uuid))
     AS t3 ON (t1.banned_by_uuid = t3.uuid)
     
-  WHERE t1.id = ? 
+  WHERE t1.id = ? AND t1.silent = 0
   LIMIT 1;
   `;
   const result = await con.query(query, [id]);
@@ -103,7 +103,7 @@ module.exports.handle = async (event) => {
       {
         result: result[0][0],
         success: true,
-        input: event,
+        // input: event,
       },
       null,
       2

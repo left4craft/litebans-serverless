@@ -62,13 +62,6 @@ module.exports.handle = async (event) => {
   page = Math.max(0, page);
   perPage = Math.max(0, perPage);
 
-  const con = await mysql.createConnection({
-    host: secret.sql.host,
-    user: secret.sql.user,
-    password: secret.sql.pass,
-    database: secret.sql.db
-  });  
-
   const query = `
   SELECT t1.id AS id, t2.name AS name, t1.uuid AS uuid, t3.name AS banned_by,
     t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time
@@ -83,10 +76,22 @@ module.exports.handle = async (event) => {
     AS t3 ON (t1.banned_by_uuid = t3.uuid)
     
   WHERE t1.silent = 0
+  GROUP BY t1.id
   ORDER BY t1.time DESC LIMIT ${page*perPage},${perPage};
   `;
+
+  const query_pages = `SELECT COUNT(id) AS count FROM ${secret.tables[type]} WHERE silent = 0;`
+
+  const con = await mysql.createConnection({
+    host: secret.sql.host,
+    user: secret.sql.user,
+    password: secret.sql.pass,
+    database: secret.sql.db
+  }); 
   const result = await con.query(query);
+  const result_pages = await con.query(query_pages);
   con.end();
+
   return {
     statusCode: 200,
     headers: {
@@ -95,8 +100,12 @@ module.exports.handle = async (event) => {
     body: JSON.stringify(
       {
         result: result[0],
+        pragnation: {
+          page: page,
+          pages: Math.floor(result_pages[0][0].count/perPage)
+        },
         success: true,
-        input: event,
+        // input: event,
       },
       null,
       2
