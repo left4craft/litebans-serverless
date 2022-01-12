@@ -11,6 +11,13 @@ provider:
   stackName: l4c-litebans-serverless
   apiName: l4c-litebans-serverless
   memorySize: 256
+  httpApi:
+    cors:
+      allowedOrigins:
+        - http://localhost:3000
+        - https://main.d1zz1o7pgiektr.amplifyapp.com
+        - https://left4craft.org
+        - https://www.left4craft.org
   vpc: # Optional VPC. But if you use VPC then both subproperties (securityGroupIds and subnetIds) are required
     securityGroupIds:
       - sg-053b09ebbefb4f00f

@@ -62,7 +62,7 @@ module.exports.handle = async (event) => {
 
   const query = `
   SELECT t1.id AS id, t2.name AS name, t1.uuid AS uuid, t3.name AS banned_by,
-    t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
+    t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time, t1.until AS until,
     t1.server_origin AS server_origin
     ${type !== 'kicks' ? ', t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid, t1.removed_by_reason AS removed_by_reason' : ' '}
 

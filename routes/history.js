@@ -28,7 +28,7 @@ module.exports.handle = async (event) => {
   const uuid = event.queryStringParameters.uuid;
   const type = event.queryStringParameters.type
 
-  if(!/^[0-9a-zA-Z-]{36}$/.test(uuid)
+  if(!(/^[0-9a-zA-Z-]{36}$/.test(uuid) || uuid.toLowerCase() === 'console')
     || (type !== 'by' && type !== 'for')
     ) return {
       statusCode: 400,
@@ -67,7 +67,7 @@ module.exports.handle = async (event) => {
   // punishments for the input user
   const query_for = `
   (SELECT t1.id AS id, 'bans' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
-    t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
+    t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time, t1.until as until,
     t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
   FROM ${secret.tables.bans} t1 
@@ -82,7 +82,7 @@ module.exports.handle = async (event) => {
   UNION
 
   (SELECT t1.id AS id, 'mutes' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
-  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
+  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time, t1.until as until,
   t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
   FROM ${secret.tables.mutes} t1 
@@ -97,7 +97,7 @@ module.exports.handle = async (event) => {
   UNION
 
   (SELECT t1.id AS id, 'warnings' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
-  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
+  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time, t1.until as until,
   t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
   FROM ${secret.tables.warnings} t1 
@@ -112,7 +112,7 @@ module.exports.handle = async (event) => {
   UNION
 
   (SELECT t1.id AS id, 'kicks' AS type, ? AS name, t1.uuid AS uuid, t2.name AS banned_by,
-  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
+  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time, t1.until as until,
   NULL AS removed_by_name, NULL AS removed_by_uuid
 
   FROM ${secret.tables.kicks} t1 
@@ -130,7 +130,7 @@ module.exports.handle = async (event) => {
   // punishments by the input user
   const query_by = `
   (SELECT t1.id AS id, 'bans' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
-    t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
+    t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time, t1.until as until,
     t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
   FROM ${secret.tables.bans} t1 
@@ -145,7 +145,7 @@ module.exports.handle = async (event) => {
   UNION
 
   (SELECT t1.id AS id, 'mutes' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
-  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
+  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time, t1.until as until,
   t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
   FROM ${secret.tables.mutes} t1 
@@ -160,7 +160,7 @@ module.exports.handle = async (event) => {
   UNION
 
   (SELECT t1.id AS id, 'warnings' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
-  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
+  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time, t1.until as until,
   t1.removed_by_name AS removed_by_name, t1.removed_by_uuid AS removed_by_uuid
 
   FROM ${secret.tables.warnings} t1 
@@ -175,7 +175,7 @@ module.exports.handle = async (event) => {
   UNION
 
   (SELECT t1.id AS id, 'kicks' AS type, t2.name AS name, t1.uuid AS uuid, ? AS banned_by,
-  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time,
+  t1.banned_by_uuid AS banned_by_uuid, t1.reason AS reason, t1.time AS time, t1.until as until,
   NULL AS removed_by_name, NULL AS removed_by_uuid
 
   FROM ${secret.tables.kicks} t1 
@@ -195,7 +195,7 @@ module.exports.handle = async (event) => {
   const query_name = `SELECT name FROM ${secret.tables.history} WHERE uuid = ?
     ORDER BY date DESC LIMIT 1;`
 
-  const query_count = `SELECT COUNT(id) AS count FROM ?? WHERE silent=0 AND uuid = ?;`
+  const query_count = `SELECT COUNT(id) AS count FROM ?? WHERE silent=0 AND ?? = ?;`
 
   const con = await mysql.createConnection({
     host: secret.sql.host,
@@ -209,7 +209,7 @@ module.exports.handle = async (event) => {
   // get total rows for pragnation
   let count = 0;
   for(const table of ['bans', 'mutes', 'warnings', 'kicks']) {
-    const result_count = await con.query(query_count, [secret.tables[table], uuid]);
+    const result_count = await con.query(query_count, [secret.tables[table],type === 'for' ? 'uuid' : 'banned_by_uuid', uuid]);
     count += Number(result_count[0][0].count);
   }
 
